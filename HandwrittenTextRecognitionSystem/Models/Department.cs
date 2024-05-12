@@ -8,6 +8,6 @@ namespace HandwrittenTextRecognitionSystem.Models
         [MaxLength(50)]
         public string Name { get; set; } = null!;
         public ICollection<Student>? Students { get; set; }
-        public ICollection<Doctor>? Doctors { get; set; }
+        public ICollection<Teacher>? Doctors { get; set; }
     }
 }

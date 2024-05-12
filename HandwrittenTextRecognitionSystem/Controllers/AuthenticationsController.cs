@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using Hangfire;
 
 namespace HandwrittenTextRecognitionSystem.Controllers
 {
@@ -74,9 +73,9 @@ namespace HandwrittenTextRecognitionSystem.Controllers
 
             return Ok();
         }
-        [HttpPost("EditDoctor")]
-        [Authorize(Roles = AppRoles.Doctor)]
-        public async Task<IActionResult> EditDoctorAsync([FromForm] EditDoctorDto model)
+        [HttpPost("EditTecher")]
+        [Authorize(Roles = "Doctor,Assistant")]
+        public async Task<IActionResult> EditTeacherAsync([FromForm] EditTeacherDto model)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -96,10 +95,10 @@ namespace HandwrittenTextRecognitionSystem.Controllers
             if (department is null)
                 return BadRequest(new ErrorModelDto { Key = nameof(model.DepartmentId), ErrorDescription = AppErrors.DataWrong });
 
-            var doctor = await _context.Doctors.AsNoTracking().SingleOrDefaultAsync(d => d.ApplicationUserId == user.Id) ?? new Doctor();
 
-            doctor.ApplicationUserId ??= user.Id;
-            doctor.DepartmentId = department.Id;
+            var Teacher = await _context.Set<Teacher>().AsNoTracking().SingleOrDefaultAsync(d => d.ApplicationUserId == user.Id) ?? new Teacher();
+            Teacher.ApplicationUserId ??= user.Id;
+            Teacher.DepartmentId = department.Id;
 
             user.FirstName = model.FirstName;
             user.LastName = model.LastName;
@@ -112,10 +111,10 @@ namespace HandwrittenTextRecognitionSystem.Controllers
             {
                 await _userManager.UpdateAsync(user);
 
-                if (doctor.Id.Equals(0))
-                    _context.Doctors.Add(doctor);
+                if (Teacher.Id.Equals(0))
+                    _context.Add(Teacher);
                 else
-                    _context.Doctors.Update(doctor);
+                    _context.Update(Teacher);
 
                 _context.SaveChanges();
 
@@ -129,15 +128,9 @@ namespace HandwrittenTextRecognitionSystem.Controllers
             }
 
             if (model.Image is not null)
-              await _imageService.CreateImageAsync(user.Id, model.Image);
+                await _imageService.CreateImageAsync(user.Id, model.Image);
 
             return Ok(new { userId = user.Id });
-        }
-        [HttpPost("EditAssistant")]
-        [Authorize(Roles = AppRoles.Assistant)]
-        public async Task<IActionResult> EditAssistantAsync()
-        {
-            return Ok();
         }
         [HttpPost("EditStudent")]
         [Authorize(Roles = AppRoles.Student)]
@@ -145,7 +138,5 @@ namespace HandwrittenTextRecognitionSystem.Controllers
         {
             return Ok();
         }
-
-
     }
 }

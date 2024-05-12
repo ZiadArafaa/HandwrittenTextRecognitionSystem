@@ -1,6 +1,6 @@
 ﻿namespace HandwrittenTextRecognitionSystem.Dtos
 {
-    public class EditDoctorDto : EditUserDto
+    public class EditTeacherDto : EditUserDto
     {
         public int DepartmentId { get; set; }
     }

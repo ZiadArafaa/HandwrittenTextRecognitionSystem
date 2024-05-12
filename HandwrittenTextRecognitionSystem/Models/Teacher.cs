@@ -1,6 +1,6 @@
 ﻿namespace HandwrittenTextRecognitionSystem.Models
 {
-    public class Doctor
+    public class Teacher
     {
         public int Id { get; set; }
         public string ApplicationUserId { get; set; } = null!;

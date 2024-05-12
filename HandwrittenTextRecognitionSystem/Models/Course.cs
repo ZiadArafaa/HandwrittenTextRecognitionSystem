@@ -11,6 +11,6 @@ namespace HandwrittenTextRecognitionSystem.Models
         public string Name { get; set; } = null!;
         public ICollection<Assignment>? Assignments { get; set; }
         public int DoctorId { get; set; }
-        public Doctor? Doctor { get; set; }
+        public Teacher? Doctor { get; set; }
     }
 }
