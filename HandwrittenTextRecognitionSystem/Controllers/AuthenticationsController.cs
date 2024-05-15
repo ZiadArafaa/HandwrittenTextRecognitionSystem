@@ -40,7 +40,10 @@ namespace HandwrittenTextRecognitionSystem.Controllers
             var user = await _userManager.FindByEmailAsync(model.Email);
 
             if (user is null || !await _userManager.CheckPasswordAsync(user, model.Password))
-                return BadRequest(new ErrorModelDto { ErrorDescription = AppErrors.DataWrong });
+            {
+                ModelState.AddModelError(nameof(model.Email), AppErrors.DataWrong);
+                return BadRequest(ModelState);
+            }
 
             var authorized = await _authentication.LoginAsync(user);
 
@@ -64,12 +67,18 @@ namespace HandwrittenTextRecognitionSystem.Controllers
             var CreateResult = await _userManager.CreateAsync(user, model.Password);
 
             if (!CreateResult.Succeeded)
-                return BadRequest(new ErrorModelDto { ErrorDescription = string.Join(',', CreateResult.Errors.Select(e => e.Description).ToList()) });
+            {
+                ModelState.AddModelError(string.Empty, string.Join(',', CreateResult.Errors.Select(e => e.Description).ToList()));
+                return BadRequest(ModelState);
+            }
 
             var RoleResult = await _userManager.AddToRoleAsync(user, model.Role);
 
             if (!RoleResult.Succeeded)
-                return BadRequest(new ErrorModelDto { ErrorDescription = string.Join(',', RoleResult.Errors.Select(e => e.Description).ToList()) });
+            {
+                ModelState.AddModelError(string.Empty, string.Join(',', RoleResult.Errors.Select(e => e.Description).ToList()));
+                return BadRequest(ModelState);
+            }
 
             return Ok();
         }
@@ -84,21 +93,30 @@ namespace HandwrittenTextRecognitionSystem.Controllers
             var user = await _userManager.FindByIdAsync(userId);
 
             if (user is null)
-                return BadRequest(new ErrorModelDto { Key = nameof(user.Id), ErrorDescription = AppErrors.DataWrong });
+            {
+                ModelState.AddModelError(nameof(user.Id), AppErrors.DataWrong);
+                return BadRequest(ModelState);
+            }
 
             var applicationUser = await _userManager.FindByNameAsync(model.UserName);
 
             if (applicationUser is not null && applicationUser.Id != user.Id)
-                return BadRequest(new ErrorModelDto { Key = nameof(applicationUser.UserName), ErrorDescription = AppErrors.DataWrong });
+            {
+                ModelState.AddModelError(nameof(applicationUser.UserName), AppErrors.DataWrong);
+                return BadRequest(ModelState);
+            }
 
             var department = await _context.Departments.AsNoTracking().SingleOrDefaultAsync(d => d.Id == model.DepartmentId);
             if (department is null)
-                return BadRequest(new ErrorModelDto { Key = nameof(model.DepartmentId), ErrorDescription = AppErrors.DataWrong });
+            {
+                ModelState.AddModelError(nameof(model.DepartmentId), AppErrors.DataWrong);
+                return BadRequest(ModelState);
+            }
 
 
-            var Teacher = await _context.Set<Teacher>().AsNoTracking().SingleOrDefaultAsync(d => d.ApplicationUserId == user.Id) ?? new Teacher();
-            Teacher.ApplicationUserId ??= user.Id;
-            Teacher.DepartmentId = department.Id;
+            var teacher = await _context.Set<Teacher>().AsNoTracking().SingleOrDefaultAsync(d => d.ApplicationUserId == user.Id) ?? new Teacher();
+            teacher.ApplicationUserId ??= user.Id;
+            teacher.DepartmentId = department.Id;
 
             user.FirstName = model.FirstName;
             user.LastName = model.LastName;
@@ -111,10 +129,10 @@ namespace HandwrittenTextRecognitionSystem.Controllers
             {
                 await _userManager.UpdateAsync(user);
 
-                if (Teacher.Id.Equals(0))
-                    _context.Add(Teacher);
+                if (teacher.Id.Equals(0))
+                    _context.Add(teacher);
                 else
-                    _context.Update(Teacher);
+                    _context.Update(teacher);
 
                 _context.SaveChanges();
 
@@ -124,7 +142,8 @@ namespace HandwrittenTextRecognitionSystem.Controllers
             catch (Exception)
             {
                 transaction.Rollback();
-                return BadRequest(new ErrorModelDto { ErrorDescription = AppErrors.DatabaseFailure });
+                ModelState.AddModelError(string.Empty, AppErrors.DatabaseFailure);
+                return BadRequest(ModelState);
             }
 
             if (model.Image is not null)
@@ -134,9 +153,73 @@ namespace HandwrittenTextRecognitionSystem.Controllers
         }
         [HttpPost("EditStudent")]
         [Authorize(Roles = AppRoles.Student)]
-        public async Task<IActionResult> EditStudentAsync()
+        public async Task<IActionResult> EditStudentAsync([FromForm] EditStudentDto model)
         {
-            return Ok();
+            if (!ModelState.IsValid)
+                return BadRequest();
+
+            var userId = User.FindFirstValue("uid");
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user is null)
+            {
+                ModelState.AddModelError(nameof(user.Id), AppErrors.DataWrong);
+                return BadRequest(ModelState);
+            }
+
+            var applicationUser = await _userManager.FindByNameAsync(model.UserName);
+
+            if (applicationUser is not null && applicationUser.Id != user.Id)
+            {
+                ModelState.AddModelError(nameof(applicationUser.UserName), AppErrors.DataWrong);
+                return BadRequest(ModelState);
+            }
+
+            var department = await _context.Departments.AsNoTracking().SingleOrDefaultAsync(d => d.Id == model.DepartmentId);
+            if (department is null)
+            {
+                ModelState.AddModelError(nameof(model.DepartmentId), AppErrors.DataWrong);
+                return BadRequest(ModelState);
+            }
+
+
+            var student = await _context.Set<Student>().AsNoTracking().SingleOrDefaultAsync(d => d.ApplicationUserId == user.Id) ?? new Student();
+            student.ApplicationUserId ??= user.Id;
+            student.DepartmentId = department.Id;
+            student.Level = model.Level;
+
+            user.FirstName = model.FirstName;
+            user.LastName = model.LastName;
+            user.UserName = model.UserName;
+            user.PhoneNumber = model.PhoneNumber;
+
+
+            using var transaction = _context.Database.BeginTransaction();
+            try
+            {
+                await _userManager.UpdateAsync(user);
+
+                if (student.Id.Equals(0))
+                    _context.Add(student);
+                else
+                    _context.Update(student);
+
+                _context.SaveChanges();
+
+
+                transaction.Commit();
+            }
+            catch (Exception)
+            {
+                transaction.Rollback();
+                ModelState.AddModelError(string.Empty, AppErrors.DatabaseFailure);
+                return BadRequest(ModelState);
+            }
+
+            if (model.Image is not null)
+                await _imageService.CreateImageAsync(user.Id, model.Image);
+
+            return Ok(new { userId = user.Id });
         }
     }
 }

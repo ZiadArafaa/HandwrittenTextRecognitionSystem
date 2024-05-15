@@ -28,7 +28,6 @@ namespace HandwrittenTextRecognitionSystem.Services
 
             var model = new AuthorizedDto
             {
-                IsAuthenticated = true,
                 Roles = await _userManager.GetRolesAsync(user),
                 Token = new JwtSecurityTokenHandler().WriteToken(token),
                 ExpireOn = token.ValidTo
