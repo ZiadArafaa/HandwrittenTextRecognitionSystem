@@ -20,14 +20,12 @@ namespace HandwrittenTextRecognitionSystem.Controllers
         private readonly IAuthenticationService _authentication;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ApplicationDbContext _context;
-        private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IImageService _imageService;
         public AuthenticationsController(IAuthenticationService authentication, UserManager<ApplicationUser> userManager, ApplicationDbContext context, IWebHostEnvironment webHostEnvironment, IImageService imageService)
         {
             _authentication = authentication;
             _userManager = userManager;
             _context = context;
-            _webHostEnvironment = webHostEnvironment;
             _imageService = imageService;
         }
 
@@ -156,7 +154,7 @@ namespace HandwrittenTextRecognitionSystem.Controllers
         public async Task<IActionResult> EditStudentAsync([FromForm] EditStudentDto model)
         {
             if (!ModelState.IsValid)
-                return BadRequest();
+                return BadRequest(ModelState);
 
             var userId = User.FindFirstValue("uid");
             var user = await _userManager.FindByIdAsync(userId);
